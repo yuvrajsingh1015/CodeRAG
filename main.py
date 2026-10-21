@@ -72,6 +72,10 @@ def main(argv: list | None = None) -> int:
     if args.command == "index":
         return 0
 
+    if len(index) == 0:
+        print(f"No source files found in {root}", file=sys.stderr)
+        return 1
+
     if args.command == "ask":
         answer(index, args.question, [], args.sources)
         return 0
