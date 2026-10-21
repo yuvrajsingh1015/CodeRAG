@@ -73,6 +73,9 @@ IGNORE_DIRS: set[str] = {
 # hidden folders are skipped, except these (CI workflows answer "how is this deployed?")
 ALLOWED_HIDDEN_DIRS: set[str] = {".github"}
 
+# files without a useful extension that are still worth indexing
+ALLOWED_FILENAMES: set[str] = {"package.json", "Dockerfile", "Makefile"}
+
 ALLOWED_EXTENSIONS: set[str] = {
     ".py",
     ".java",
@@ -95,6 +98,13 @@ ALLOWED_EXTENSIONS: set[str] = {
     ".ml",
     ".sh",
     ".sql",
+    ".html",
+    ".css",
+    ".scss",
+    ".vue",
+    ".svelte",
+    ".kts",
+    ".gradle",
     ".md",
     ".toml",
     ".yaml",

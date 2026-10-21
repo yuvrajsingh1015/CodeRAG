@@ -46,7 +46,7 @@ def iter_source_files(root: Path) -> Iterator[Path]:
         )
         for name in sorted(filenames):
             path = Path(dirpath) / name
-            if path.suffix.lower() not in config.ALLOWED_EXTENSIONS:
+            if path.suffix.lower() not in config.ALLOWED_EXTENSIONS and name not in config.ALLOWED_FILENAMES:
                 continue
             try:
                 if path.stat().st_size > config.MAX_FILE_BYTES:
