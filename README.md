@@ -4,9 +4,9 @@
 
 Ask questions about a local codebase in plain language. CodeRAG splits your source files into chunks, embeds them into a FAISS vector index and answers questions with a chat model that only sees the most relevant snippets. Every answer cites the files and line ranges it used.
 
-Runs fully local with [Ollama](https://ollama.com) by default, or against the OpenAI API (or any OpenAI-compatible server) by changing two settings.
+Runs fully local with [Ollama](https://ollama.com) by default, or with Gemini (free API key) or the OpenAI API by changing two settings.
 
-<!-- screenshot: docs/screenshot.png -->
+![CodeRAG answering a question about a Java compiler, with cited file and line ranges](docs/screenshot.png)
 
 ## How it works
 
@@ -23,7 +23,7 @@ Runs fully local with [Ollama](https://ollama.com) by default, or against the Op
 - **Incremental re-indexing.** Files are hashed (SHA-1). On re-index, unchanged files keep their stored vectors and only new or edited files are sent to the embedding model. Deleted files are dropped.
 - **Cosine similarity** via normalized vectors and `faiss.IndexFlatIP`.
 - **Per-folder cache.** Each indexed folder gets its own index under `~/.cache/coderag/`, so nothing is written into your project.
-- **Retries** with exponential backoff on embedding calls, batching (32 inputs per request).
+- **Retries** with exponential backoff on embedding calls, batching (32 inputs per request). On a rate limit (HTTP 429) it waits as long as the API asks before trying again.
 
 ## Setup
 
@@ -44,14 +44,23 @@ ollama pull gemma3
 ollama pull nomic-embed-text
 ```
 
+**Gemini (free):** create an API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey), then set in `.env`:
+
+```bash
+AI_BACKEND=gemini
+API_KEY=your-key
+```
+
+Models default to `gemini-flash-latest` and `gemini-embedding-001`. The free tier allows about 100 embedding requests per minute, so indexing a bigger repo for the first time pauses when it hits the limit and then continues on its own.
+
 **OpenAI:** set these in `.env`:
 
 ```bash
 AI_BACKEND=remote
 API_KEY=sk-...
-CHAT_MODEL=gpt-4o-mini
-EMBEDDING_MODEL=text-embedding-3-small
 ```
+
+Models default to `gpt-4o-mini` and `text-embedding-3-small`.
 
 ## Usage
 
@@ -77,11 +86,11 @@ All settings are read from `.env` (see [.env.example](.env.example)).
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `AI_BACKEND` | `local` | `local`/`ollama` or `remote`/`openai` |
-| `BASE_URL` | `http://localhost:11434/v1/` | OpenAI-compatible endpoint for the local backend |
-| `API_KEY` | | Needed for `remote` |
-| `CHAT_MODEL` | `gemma3:latest` | Model that writes the answer |
-| `EMBEDDING_MODEL` | `nomic-embed-text` | Model that embeds code and questions |
+| `AI_BACKEND` | `local` | `local`/`ollama`, `gemini` or `remote`/`openai` |
+| `BASE_URL` | backend default | Override the endpoint, e.g. for LM Studio |
+| `API_KEY` | | Needed for `gemini` and `remote` |
+| `CHAT_MODEL` | per backend | Model that writes the answer |
+| `EMBEDDING_MODEL` | per backend | Model that embeds code and questions |
 | `WATCHED_DIR` | `.` | Default folder to index |
 | `TOP_K` | `5` | Snippets sent to the chat model |
 | `CHUNK_LINES` / `CHUNK_OVERLAP` | `60` / `10` | Chunk size in lines |
@@ -94,7 +103,7 @@ Indexed file types and skipped folders (`.git`, `node_modules`, `venv`, `build`,
 ```
 coderag/
   config.py       settings from .env
-  ai_client.py    OpenAI-compatible client for Ollama or OpenAI
+  ai_client.py    OpenAI-compatible client for Ollama, Gemini or OpenAI
   embeddings.py   batched embedding calls with retry, normalization
   index.py        file walking, chunking, FAISS index, incremental rebuild, save/load
   search.py       query embedding + top-k search
