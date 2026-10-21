@@ -33,7 +33,8 @@ _default_chat, _default_embed = DEFAULT_MODELS.get(
 )
 
 OPENAI_API_KEY: str = _get_env("API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", default="")
-OPENAI_BASE_URL: str = _get_env("BASE_URL", default="http://localhost:11434/v1/")
+# empty means the backend default (Ollama on localhost, or the Gemini endpoint)
+OPENAI_BASE_URL: str = _get_env("BASE_URL", default="")
 CHAT_MODEL: str = _get_env("CHAT_MODEL", default=_default_chat)
 EMBEDDING_MODEL: str = _get_env("EMBEDDING_MODEL", default=_default_embed)
 
