@@ -98,6 +98,15 @@ def stream_answer(messages: List[Dict[str, str]], model: str = config.CHAT_MODEL
         yield f"\n\nError: {describe_error(e)}"
 
 
+def search_query(question: str, history: Optional[List[Dict[str, str]]] = None) -> str:
+    """
+    Follow-ups like "and what is the default?" say nothing about the topic on their own,
+    so the previous question is searched together with the new one.
+    """
+    previous = [m["content"] for m in (history or []) if m["role"] == "user"]
+    return f"{previous[-1]}\n{question}" if previous else question
+
+
 def ask(
     index: CodeIndex,
     question: str,
@@ -105,5 +114,5 @@ def ask(
     k: int = config.TOP_K,
 ) -> tuple:
     """Retrieve context for a question. Returns (results, answer stream)."""
-    results = search_code(index, question, k=k)
+    results = search_code(index, search_query(question, history), k=k)
     return results, stream_answer(build_messages(question, results, history, files=list(index.file_hashes)))
