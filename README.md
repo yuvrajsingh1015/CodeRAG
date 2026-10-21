@@ -1,6 +1,6 @@
 # CodeRAG
 
-[![CI](https://github.com/yuvrajsingh1015/Codebase-Rag-Chat/actions/workflows/ci.yml/badge.svg)](https://github.com/yuvrajsingh1015/Codebase-Rag-Chat/actions/workflows/ci.yml)
+[![CI](https://github.com/yuvrajsingh1015/CodeRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/yuvrajsingh1015/CodeRAG/actions/workflows/ci.yml)
 
 Ask questions about a local codebase in plain language. CodeRAG splits your source files into chunks, embeds them into a FAISS vector index and answers questions with a chat model that only sees the most relevant snippets. Every answer cites the files and line ranges it used.
 
@@ -31,8 +31,8 @@ Runs fully local with [Ollama](https://ollama.com) by default, or with Gemini (f
 Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/yuvrajsingh1015/Codebase-Rag-Chat.git
-cd Codebase-Rag-Chat
+git clone https://github.com/yuvrajsingh1015/CodeRAG.git
+cd CodeRAG
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
