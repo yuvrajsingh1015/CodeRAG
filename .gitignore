@@ -3,6 +3,7 @@
 # Project-specific generated files
 *.faiss
 metadata.npy
+.coderag/
 
 # Streamlit local settings/state
 .streamlit/
