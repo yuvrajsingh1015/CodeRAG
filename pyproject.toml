@@ -1,0 +1,36 @@
+[project]
+name = "coderag"
+version = "0.1.0"
+description = "Chat with a local codebase using retrieval-augmented generation (FAISS + OpenAI-compatible models)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "faiss-cpu>=1.8",
+    "numpy>=1.26",
+    "openai>=1.40",
+    "python-dotenv>=1.0",
+    "streamlit>=1.38",
+    "tenacity>=8.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools]
+packages = ["coderag"]
+py-modules = ["main", "prompt_flow"]
+
+[project.scripts]
+coderag = "main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["UP006", "UP007", "UP035", "UP045"]
