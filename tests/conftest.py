@@ -56,6 +56,12 @@ def repo(tmp_path):
     (root / "README.md").write_text("# Demo\nA tiny demo project.\n")
     (root / "image.png").write_bytes(b"\x89PNG not code")
     (root / "node_modules" / "lib" / "index.js").write_text("module.exports = 1\n")
+    (root / ".github" / "workflows").mkdir(parents=True)
+    (root / ".github" / "workflows" / "deploy.yml").write_text(
+        "on: push\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n"
+    )
+    (root / ".cache").mkdir()
+    (root / ".cache" / "junk.py").write_text("x = 1\n")
     return root
 
 
