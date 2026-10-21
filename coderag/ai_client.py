@@ -4,12 +4,13 @@ from typing import Optional, Tuple
 
 from openai import OpenAI
 
-from coderag.config import AI_BACKEND, OPENAI_API_KEY, OPENAI_BASE_URL
+from coderag.config import AI_BACKEND, GEMINI_BASE_URL, OPENAI_API_KEY, OPENAI_BASE_URL
 
 logger = logging.getLogger(__name__)
 
 LOCAL_NAMES = {"local", "ollama"}
 REMOTE_NAMES = {"remote", "openai"}
+GEMINI_NAMES = {"gemini", "google"}
 
 
 def create_ai_client(
@@ -23,6 +24,7 @@ def create_ai_client(
     Backends:
     - "local" / "ollama"  → uses BASE_URL (Ollama, LM Studio, ...)
     - "remote" / "openai" → uses API key (hosted service)
+    - "gemini" / "google" → Gemini through Google's OpenAI-compatible endpoint, needs an AI Studio key
     """
 
     try:
@@ -46,6 +48,16 @@ def create_ai_client(
             client = OpenAI(api_key=api_key)
             logger.info("Using remote backend")
             return client, "OpenAI"
+
+        # --- Gemini (OpenAI-compatible endpoint) ---
+        if backend in GEMINI_NAMES:
+            if not api_key:
+                logger.error("Missing API key for Gemini backend")
+                return None, "Unavailable"
+
+            client = OpenAI(api_key=api_key, base_url=base_url or GEMINI_BASE_URL)
+            logger.info("Using Gemini backend")
+            return client, "Gemini"
 
         # --- Unknown backend ---
         logger.error("Unsupported AI_BACKEND: %s", backend)

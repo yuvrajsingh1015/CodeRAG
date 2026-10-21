@@ -16,13 +16,27 @@ def _get_env(*names: str, default: str = "") -> str:
     return default
 
 
-# "local" (Ollama or any OpenAI-compatible server) or "remote" (OpenAI)
-AI_BACKEND: str = _get_env("AI_BACKEND", default="local")
+# "local" (Ollama or any OpenAI-compatible server), "remote" (OpenAI) or "gemini" (Google AI Studio)
+AI_BACKEND: str = _get_env("AI_BACKEND", default="local").lower()
 
-OPENAI_API_KEY: str = _get_env("API_KEY", "OPENAI_API_KEY", default="")
-OPENAI_BASE_URL: str = _get_env("BASE_URL", default="http://localhost:11434/v1/")
-CHAT_MODEL: str = _get_env("CHAT_MODEL", default="gemma3:latest")
-EMBEDDING_MODEL: str = _get_env("EMBEDDING_MODEL", default="nomic-embed-text")
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+# default models per backend, used when CHAT_MODEL / EMBEDDING_MODEL are not set
+DEFAULT_MODELS: dict[str, tuple[str, str]] = {
+    "local": ("gemma3:latest", "nomic-embed-text"),
+    "remote": ("gpt-4o-mini", "text-embedding-3-small"),
+    "gemini": ("gemini-flash-lite-latest", "gemini-embedding-001"),
+}
+_BACKEND_ALIASES = {"ollama": "local", "openai": "remote", "google": "gemini"}
+_default_chat, _default_embed = DEFAULT_MODELS.get(
+    _BACKEND_ALIASES.get(AI_BACKEND, AI_BACKEND), DEFAULT_MODELS["local"]
+)
+
+OPENAI_API_KEY: str = _get_env("API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", default="")
+# empty means the backend default (Ollama on localhost, or the Gemini endpoint)
+OPENAI_BASE_URL: str = _get_env("BASE_URL", default="")
+CHAT_MODEL: str = _get_env("CHAT_MODEL", default=_default_chat)
+EMBEDDING_MODEL: str = _get_env("EMBEDDING_MODEL", default=_default_embed)
 
 WATCHED_DIR: Path = Path(_get_env("WATCHED_DIR", default=".")).expanduser().resolve()
 # Where indexes are stored. Each indexed folder gets its own subfolder in here.
@@ -56,6 +70,12 @@ IGNORE_DIRS: set[str] = {
     ".ruff_cache",
 }
 
+# hidden folders are skipped, except these (CI workflows answer "how is this deployed?")
+ALLOWED_HIDDEN_DIRS: set[str] = {".github"}
+
+# files without a useful extension that are still worth indexing
+ALLOWED_FILENAMES: set[str] = {"package.json", "Dockerfile", "Makefile"}
+
 ALLOWED_EXTENSIONS: set[str] = {
     ".py",
     ".java",
@@ -78,6 +98,13 @@ ALLOWED_EXTENSIONS: set[str] = {
     ".ml",
     ".sh",
     ".sql",
+    ".html",
+    ".css",
+    ".scss",
+    ".vue",
+    ".svelte",
+    ".kts",
+    ".gradle",
     ".md",
     ".toml",
     ".yaml",

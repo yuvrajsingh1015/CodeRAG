@@ -2,10 +2,10 @@ import logging
 from typing import List, Optional
 
 import numpy as np
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 from coderag.ai_client import get_ai_client
 from coderag.config import EMBEDDING_DIM, EMBEDDING_MODEL
+from coderag.retry import api_retry
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +33,13 @@ def normalize(vecs: np.ndarray) -> np.ndarray:
     return (vecs / norms).astype(np.float32)
 
 
-# decorator for the func below
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=0.5, max=8),  # exponential backoff: 0.5, 1, 2, 4, 8 seconds
-    reraise=True,  # re-raise the last exception after all retries are exhausted
-)
+# indexing can wait through a few rate limit windows (Gemini free tier: 100 embeddings per minute)
+@api_retry(attempts=6)
 def _embed_batch(inputs: List[str]) -> np.ndarray:
     """Call embeddings API with retry/backoff. Returns shape (n, d)."""
     client, _provider = get_ai_client()
     if client is None:
-        raise RuntimeError("AI client not initialized")
+        raise RuntimeError("No usable AI backend. Check AI_BACKEND and API_KEY in your .env.")
 
     response = client.embeddings.create(
         model=EMBEDDING_MODEL,

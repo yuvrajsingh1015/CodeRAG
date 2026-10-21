@@ -26,7 +26,7 @@ def test_loaded_index_is_reused_incrementally(repo, embed, cache):
     loaded = CodeIndex.load(repo, model="fake", cache_dir=cache)
     stats = loaded.build(embed)
 
-    assert stats.reused == 3
+    assert stats.reused == 4
     assert embed.calls == calls
 
 

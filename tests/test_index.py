@@ -3,7 +3,7 @@ from coderag.index import CodeIndex, chunk_lines, iter_source_files
 
 def test_iter_source_files_skips_ignored_and_binary(repo):
     files = sorted(p.relative_to(repo).as_posix() for p in iter_source_files(repo))
-    assert files == ["README.md", "auth/login.py", "db/connection.py"]
+    assert files == [".github/workflows/deploy.yml", "README.md", "auth/login.py", "db/connection.py"]
 
 
 def test_chunk_lines_overlap_and_line_numbers():
@@ -20,9 +20,9 @@ def test_chunk_lines_empty_file():
 def test_build_indexes_all_chunks(repo, embed):
     index = CodeIndex(repo)
     stats = index.build(embed)
-    assert stats.files == 3
-    assert stats.embedded == 3
-    assert len(index) == index.faiss_index.ntotal == 3
+    assert stats.files == 4
+    assert stats.embedded == 4
+    assert len(index) == index.faiss_index.ntotal == 4
 
 
 def test_rebuild_only_embeds_changed_files(repo, embed):
@@ -33,10 +33,15 @@ def test_rebuild_only_embeds_changed_files(repo, embed):
     (repo / "auth" / "login.py").write_text("def logout(user):\n    pass\n")
     stats = index.build(embed)
 
-    assert stats.reused == 2
+    assert stats.reused == 3
     assert stats.embedded == 1
     assert embed.texts - first == 1
-    assert {c.path for c in index.chunks} == {"README.md", "auth/login.py", "db/connection.py"}
+    assert {c.path for c in index.chunks} == {
+        ".github/workflows/deploy.yml",
+        "README.md",
+        "auth/login.py",
+        "db/connection.py",
+    }
 
 
 def test_rebuild_drops_deleted_files(repo, embed):
@@ -65,4 +70,16 @@ def test_empty_files_count_as_unchanged(repo, embed):
     index.build(embed)
     stats = index.build(embed)
     assert stats.embedded == 0
-    assert stats.reused == 4
+    assert stats.reused == 5
+
+
+def test_other_hidden_folders_are_skipped(repo):
+    files = {p.relative_to(repo).as_posix() for p in iter_source_files(repo)}
+    assert ".cache/junk.py" not in files
+
+
+def test_known_filenames_and_web_files_are_indexed(tmp_path):
+    for name in ["Dockerfile", "package.json", "package-lock.json", "index.html", "style.css", "photo.jpg"]:
+        (tmp_path / name).write_text("x\n")
+    files = sorted(p.name for p in iter_source_files(tmp_path))
+    assert files == ["Dockerfile", "index.html", "package.json", "style.css"]

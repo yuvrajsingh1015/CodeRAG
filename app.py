@@ -10,6 +10,7 @@ from coderag import config
 from coderag.ai_client import get_ai_client
 from coderag.embeddings import embed_texts
 from coderag.index import CodeIndex
+from coderag.retry import describe_error
 from prompt_flow import ask
 
 st.set_page_config(page_title="CodeRAG", page_icon="🔎", layout="wide")
@@ -37,7 +38,7 @@ def reindex(index: CodeIndex) -> None:
             f"{stats.chunks} chunks from {stats.files} files ({stats.embedded} embedded, {stats.reused} unchanged)"
         )
     except Exception as e:
-        st.sidebar.error(f"Indexing failed: {e}")
+        st.sidebar.error(f"Indexing failed. {describe_error(e)}")
     finally:
         bar.empty()
 
