@@ -1,6 +1,6 @@
 from coderag.index import CodeIndex
 from coderag.search import search_code
-from prompt_flow import _by_line, build_messages, format_context
+from prompt_flow import _by_line, build_messages, format_context, search_query
 from tests.conftest import fake_query
 
 
@@ -64,3 +64,12 @@ def test_file_list_left_out_for_big_repos():
 def test_line_numbers_are_removed_from_streamed_answers():
     pieces = ["See `a.py:3-4`:\n```py\n   3 | def f", "():\n   4 |     return 1\n", "```\nDone, 2 | 3 stays."]
     assert "".join(_by_line(iter(pieces))) == "See `a.py:3-4`:\n```py\ndef f():\n    return 1\n```\nDone, 2 | 3 stays."
+
+
+def test_follow_up_is_searched_with_previous_question():
+    history = [
+        {"role": "user", "content": "How does login work?"},
+        {"role": "assistant", "content": "It creates a session token."},
+    ]
+    assert search_query("And where is it stored?", history) == "How does login work?\nAnd where is it stored?"
+    assert search_query("How does login work?") == "How does login work?"
