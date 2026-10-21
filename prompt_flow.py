@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+import logging
+from typing import Dict, Iterator, List, Optional
+
+from coderag import config
+from coderag.ai_client import get_ai_client
+from coderag.index import CodeIndex
+from coderag.search import SearchResult, search_code
+
+logger = logging.getLogger(__name__)
+
+SYSTEM_PROMPT = """You are a senior developer helping someone understand a codebase.
+Answer using only the code snippets provided as context.
+Cite the snippets you rely on as `path:start-end`.
+If the context does not contain the answer, say so plainly and suggest where to look instead of guessing.
+Keep answers short and concrete, and show small code excerpts when they help."""
+
+# how many earlier messages from the chat are sent along for follow-up questions
+HISTORY_TURNS = 6
+
+
+def format_context(results: List[SearchResult]) -> str:
+    """Turn search results into a context block the model can cite."""
+    blocks = []
+    for r in results:
+        lang = r.chunk.path.rsplit(".", 1)[-1] if "." in r.chunk.path else ""
+        blocks.append(f"### {r.location}\n```{lang}\n{r.chunk.text}\n```")
+    return "\n\n".join(blocks)
+
+
+def build_messages(
+    question: str,
+    results: List[SearchResult],
+    history: Optional[List[Dict[str, str]]] = None,
+) -> List[Dict[str, str]]:
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.extend((history or [])[-HISTORY_TURNS:])
+
+    context = format_context(results) if results else "(no matching code found)"
+    messages.append({"role": "user", "content": f"Context:\n\n{context}\n\nQuestion: {question}"})
+    return messages
+
+
+def stream_answer(messages: List[Dict[str, str]], model: str = config.CHAT_MODEL) -> Iterator[str]:
+    """Yield the answer piece by piece as the model writes it."""
+    client, _provider = get_ai_client()
+    if client is None:
+        yield "AI backend is not available. Check AI_BACKEND, BASE_URL and API_KEY in your .env."
+        return
+
+    try:
+        stream = client.chat.completions.create(model=model, messages=messages, stream=True, temperature=0.2)
+        for event in stream:
+            if event.choices and event.choices[0].delta.content:
+                yield event.choices[0].delta.content
+    except Exception as e:
+        logger.error("Chat request failed: %s", e)
+        yield f"\n\nRequest failed: {e}"
+
+
+def ask(
+    index: CodeIndex,
+    question: str,
+    history: Optional[List[Dict[str, str]]] = None,
+    k: int = config.TOP_K,
+) -> tuple:
+    """Retrieve context for a question. Returns (results, answer stream)."""
+    results = search_code(index, question, k=k)
+    return results, stream_answer(build_messages(question, results, history))
