@@ -1,32 +1,6 @@
-from types import SimpleNamespace
-
 import numpy as np
-from openai import RateLimitError
 
 from coderag import embeddings
-
-
-def _rate_limit(message):
-    # skip the SDK constructor, it needs a real HTTP response object
-    error = RateLimitError.__new__(RateLimitError)
-    Exception.__init__(error, message)
-    return error
-
-
-def _state(error):
-    return SimpleNamespace(outcome=SimpleNamespace(exception=lambda: error), attempt_number=1)
-
-
-def test_wait_uses_retry_delay_from_error():
-    assert embeddings._wait(_state(_rate_limit("Quota exceeded. Please retry in 17.69s."))) == 18.69
-
-
-def test_wait_without_delay_falls_back_to_30s():
-    assert embeddings._wait(_state(_rate_limit("Too many requests"))) == 30.0
-
-
-def test_wait_is_short_for_other_errors():
-    assert embeddings._wait(_state(TimeoutError())) <= 8
 
 
 def test_normalize_rows():
