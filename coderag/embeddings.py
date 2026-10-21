@@ -1,33 +1,15 @@
 import logging
-import re
 from typing import List, Optional
 
 import numpy as np
-from openai import RateLimitError
-from tenacity import RetryCallState, retry, stop_after_attempt, wait_exponential
 
 from coderag.ai_client import get_ai_client
 from coderag.config import EMBEDDING_DIM, EMBEDDING_MODEL
+from coderag.retry import api_retry
 
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 32
-
-_backoff = wait_exponential(multiplier=0.5, max=8)  # 0.5, 1, 2, 4, 8 seconds
-
-
-def _wait(state: RetryCallState) -> float:
-    """
-    Free tiers (e.g. Gemini: 100 embeddings per minute) answer with 429 and say how long to wait,
-    "Please retry in 17.69s". Wait that long instead of the short backoff.
-    """
-    error = state.outcome.exception() if state.outcome else None
-    if isinstance(error, RateLimitError):
-        match = re.search(r"retry in ([\d.]+)s", str(error))
-        delay = float(match.group(1)) + 1 if match else 30.0
-        logger.warning("Rate limited, waiting %.0fs", delay)
-        return min(delay, 65.0)
-    return _backoff(state)
 
 
 def _chunk_text(text: str, max_chars: int = 4000, overlap: int = 400) -> List[str]:
@@ -51,12 +33,8 @@ def normalize(vecs: np.ndarray) -> np.ndarray:
     return (vecs / norms).astype(np.float32)
 
 
-# decorator for the func below
-@retry(
-    stop=stop_after_attempt(6),
-    wait=_wait,
-    reraise=True,  # re-raise the last exception after all retries are exhausted
-)
+# indexing can wait through a few rate limit windows (Gemini free tier: 100 embeddings per minute)
+@api_retry(attempts=6)
 def _embed_batch(inputs: List[str]) -> np.ndarray:
     """Call embeddings API with retry/backoff. Returns shape (n, d)."""
     client, _provider = get_ai_client()
