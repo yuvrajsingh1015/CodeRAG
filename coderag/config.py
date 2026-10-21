@@ -25,7 +25,7 @@ GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 DEFAULT_MODELS: dict[str, tuple[str, str]] = {
     "local": ("gemma3:latest", "nomic-embed-text"),
     "remote": ("gpt-4o-mini", "text-embedding-3-small"),
-    "gemini": ("gemini-3.5-flash", "gemini-embedding-001"),
+    "gemini": ("gemini-flash-lite-latest", "gemini-embedding-001"),
 }
 _BACKEND_ALIASES = {"ollama": "local", "openai": "remote", "google": "gemini"}
 _default_chat, _default_embed = DEFAULT_MODELS.get(

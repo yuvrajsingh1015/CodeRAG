@@ -52,7 +52,7 @@ AI_BACKEND=gemini
 API_KEY=your-key
 ```
 
-Models default to `gemini-3.5-flash` and `gemini-embedding-001`. The free tier is rate limited (about 100 embeddings and a few chat requests per minute, depending on the model). When a limit is hit, CodeRAG waits as long as the API asks and carries on, so a first index of a bigger repo can take a minute or two. If the chat model is overloaded or retired, set another one, e.g. `CHAT_MODEL=gemini-flash-lite-latest`.
+Models default to `gemini-flash-lite-latest` and `gemini-embedding-001`, which have the most generous free limits. The free tier allows about 100 embeddings per minute and a few chat requests per minute. When a per-minute limit is hit, CodeRAG waits as long as the API asks and carries on, so a first index of a bigger repo can take a minute or two. For more careful answers set `CHAT_MODEL=gemini-3.5-flash`, which has a smaller daily free quota.
 
 **OpenAI:** set these in `.env`:
 
