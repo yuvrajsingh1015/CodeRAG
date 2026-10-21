@@ -5,12 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import streamlit as st
-from openai import RateLimitError
 
 from coderag import config
 from coderag.ai_client import get_ai_client
 from coderag.embeddings import embed_texts
 from coderag.index import CodeIndex
+from coderag.retry import describe_error
 from prompt_flow import ask
 
 st.set_page_config(page_title="CodeRAG", page_icon="🔎", layout="wide")
@@ -37,10 +37,8 @@ def reindex(index: CodeIndex) -> None:
         st.sidebar.success(
             f"{stats.chunks} chunks from {stats.files} files ({stats.embedded} embedded, {stats.reused} unchanged)"
         )
-    except RateLimitError:
-        st.sidebar.error("The embedding API is still rate limited. Wait a minute and click Index / update again.")
     except Exception as e:
-        st.sidebar.error(f"Indexing failed: {str(e)[:300]}")
+        st.sidebar.error(f"Indexing failed. {describe_error(e)}")
     finally:
         bar.empty()
 

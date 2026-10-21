@@ -10,6 +10,7 @@ from pathlib import Path
 from coderag import config
 from coderag.embeddings import embed_texts
 from coderag.index import CodeIndex
+from coderag.retry import describe_error
 from prompt_flow import ask
 
 
@@ -56,12 +57,20 @@ def main(argv: list | None = None) -> int:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING)
 
-    if args.command == "index":
-        build_index(Path(args.path))
-        return 0
+    root = Path(args.path).expanduser()
+    if not root.is_dir():
+        print(f"Not a folder: {root}", file=sys.stderr)
+        return 1
 
     # ask and chat update the index first, which is fast when nothing changed
-    index = build_index(Path(args.path))
+    try:
+        index = build_index(root)
+    except Exception as e:
+        print(f"Indexing failed. {describe_error(e)}", file=sys.stderr)
+        return 1
+
+    if args.command == "index":
+        return 0
 
     if args.command == "ask":
         answer(index, args.question, [], args.sources)
