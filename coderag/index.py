@@ -39,7 +39,11 @@ def iter_source_files(root: Path) -> Iterator[Path]:
     """Walk root and yield files with an allowed extension, skipping ignored folders."""
     for dirpath, dirnames, filenames in os.walk(root):
         # editing dirnames in place stops os.walk from going into those folders
-        dirnames[:] = sorted(d for d in dirnames if d not in config.IGNORE_DIRS and not d.startswith("."))
+        dirnames[:] = sorted(
+            d
+            for d in dirnames
+            if d not in config.IGNORE_DIRS and (not d.startswith(".") or d in config.ALLOWED_HIDDEN_DIRS)
+        )
         for name in sorted(filenames):
             path = Path(dirpath) / name
             if path.suffix.lower() not in config.ALLOWED_EXTENSIONS:

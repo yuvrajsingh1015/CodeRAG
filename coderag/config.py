@@ -70,6 +70,9 @@ IGNORE_DIRS: set[str] = {
     ".ruff_cache",
 }
 
+# hidden folders are skipped, except these (CI workflows answer "how is this deployed?")
+ALLOWED_HIDDEN_DIRS: set[str] = {".github"}
+
 ALLOWED_EXTENSIONS: set[str] = {
     ".py",
     ".java",
