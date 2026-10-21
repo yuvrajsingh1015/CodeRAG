@@ -76,3 +76,10 @@ def test_empty_files_count_as_unchanged(repo, embed):
 def test_other_hidden_folders_are_skipped(repo):
     files = {p.relative_to(repo).as_posix() for p in iter_source_files(repo)}
     assert ".cache/junk.py" not in files
+
+
+def test_known_filenames_and_web_files_are_indexed(tmp_path):
+    for name in ["Dockerfile", "package.json", "package-lock.json", "index.html", "style.css", "photo.jpg"]:
+        (tmp_path / name).write_text("x\n")
+    files = sorted(p.name for p in iter_source_files(tmp_path))
+    assert files == ["Dockerfile", "index.html", "package.json", "style.css"]
