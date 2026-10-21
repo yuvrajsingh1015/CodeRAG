@@ -15,11 +15,14 @@ SYSTEM_PROMPT = """You are a senior developer helping someone understand a codeb
 Answer using only the code snippets provided as context.
 Each snippet line starts with its line number. Cite the exact lines you rely on as `path:start-end`.
 When you quote code, leave out the line numbers.
+Only mention files, functions and values that appear in the context. Never guess file names or extensions.
 If the context does not contain the answer, say so plainly and suggest where to look instead of guessing.
 Keep answers short and concrete, and show small code excerpts when they help."""
 
 # how many earlier messages from the chat are sent along for follow-up questions
 HISTORY_TURNS = 6
+# the file list helps with "where is X?" questions, but is left out for big repos
+MAX_LISTED_FILES = 300
 
 
 def format_context(results: List[SearchResult]) -> str:
@@ -38,8 +41,12 @@ def build_messages(
     question: str,
     results: List[SearchResult],
     history: Optional[List[Dict[str, str]]] = None,
+    files: Optional[List[str]] = None,
 ) -> List[Dict[str, str]]:
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    system = SYSTEM_PROMPT
+    if files and len(files) <= MAX_LISTED_FILES:
+        system += "\n\nFiles in the project:\n" + "\n".join(sorted(files))
+    messages = [{"role": "system", "content": system}]
     messages.extend((history or [])[-HISTORY_TURNS:])
 
     context = format_context(results) if results else "(no matching code found)"
@@ -78,4 +85,4 @@ def ask(
 ) -> tuple:
     """Retrieve context for a question. Returns (results, answer stream)."""
     results = search_code(index, question, k=k)
-    return results, stream_answer(build_messages(question, results, history))
+    return results, stream_answer(build_messages(question, results, history, files=list(index.file_hashes)))

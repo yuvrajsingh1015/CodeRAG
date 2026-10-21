@@ -49,3 +49,13 @@ def test_prompt_contains_cited_context(repo, embed):
 def test_prompt_without_results():
     messages = build_messages("anything?", [])
     assert "(no matching code found)" in messages[-1]["content"]
+
+
+def test_file_list_goes_into_system_prompt():
+    messages = build_messages("where?", [], files=["src/b.py", "src/a.py"])
+    assert messages[0]["content"].endswith("Files in the project:\nsrc/a.py\nsrc/b.py")
+
+
+def test_file_list_left_out_for_big_repos():
+    messages = build_messages("where?", [], files=[f"f{i}.py" for i in range(1000)])
+    assert "Files in the project" not in messages[0]["content"]
