@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Dict, Iterator, List, Optional
 
 from coderag import config
@@ -54,6 +55,26 @@ def build_messages(
     return messages
 
 
+# "  12 | code" -> "code", the prefix format_context adds to every line
+_LINE_NUMBER = re.compile(r"^\s*\d+ \| ?", re.MULTILINE)
+
+
+def strip_line_numbers(text: str) -> str:
+    return _LINE_NUMBER.sub("", text)
+
+
+def _by_line(pieces: Iterator[str]) -> Iterator[str]:
+    """Re-chunk streamed text into whole lines so line-number prefixes can be removed reliably."""
+    buffer = ""
+    for piece in pieces:
+        buffer += piece
+        *lines, buffer = buffer.split("\n")
+        for line in lines:
+            yield strip_line_numbers(line) + "\n"
+    if buffer:
+        yield strip_line_numbers(buffer)
+
+
 # a chat should not hang for minutes, so give up sooner than indexing does
 @api_retry(attempts=3)
 def _open_stream(client, model: str, messages: List[Dict[str, str]]):
@@ -69,9 +90,9 @@ def stream_answer(messages: List[Dict[str, str]], model: str = config.CHAT_MODEL
 
     try:
         stream = _open_stream(client, model, messages)
-        for event in stream:
-            if event.choices and event.choices[0].delta.content:
-                yield event.choices[0].delta.content
+        pieces = (e.choices[0].delta.content for e in stream if e.choices and e.choices[0].delta.content)
+        # models sometimes copy the context line numbers into quoted code
+        yield from _by_line(pieces)
     except Exception as e:
         logger.debug("Chat request failed: %s", e)
         yield f"\n\nError: {describe_error(e)}"
