@@ -25,17 +25,26 @@ def _retry_delay(error: Exception) -> float | None:
     return float(match.group(1)) + 1 if match else None
 
 
+def _is_daily_quota(error: BaseException) -> bool:
+    # waiting a minute does not help once the free requests for the day are used up
+    return isinstance(error, RateLimitError) and "PerDay" in str(error)
+
+
 def _is_overloaded(error: BaseException) -> bool:
     return isinstance(error, APIStatusError) and error.status_code in (500, 502, 503, 504)
 
 
 def is_retryable(error: BaseException) -> bool:
     """Rate limits, overloaded servers and network problems can pass, a wrong key or model will not."""
+    if _is_daily_quota(error):
+        return False
     return isinstance(error, (RateLimitError, APIConnectionError, APITimeoutError)) or _is_overloaded(error)
 
 
 def wait_for(state: RetryCallState) -> float:
     error = state.outcome.exception() if state.outcome else None
+    if _is_daily_quota(error):
+        return "The free daily quota for this model is used up. Try again tomorrow or set another CHAT_MODEL."
     if isinstance(error, RateLimitError):
         delay = _retry_delay(error) or 30.0
         logger.warning("Rate limited, waiting %.0fs", delay)
@@ -63,6 +72,8 @@ def describe_error(error: Exception) -> str:
         return "The API key was rejected. Check API_KEY in your .env."
     if isinstance(error, NotFoundError):
         return "The model was not found. Check CHAT_MODEL and EMBEDDING_MODEL in your .env."
+    if _is_daily_quota(error):
+        return "The free daily quota for this model is used up. Try again tomorrow or set another CHAT_MODEL."
     if isinstance(error, RateLimitError):
         delay = _retry_delay(error)
         wait = f" Try again in about {delay:.0f} seconds." if delay else " Try again in a minute."

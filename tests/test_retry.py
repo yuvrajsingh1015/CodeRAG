@@ -50,3 +50,9 @@ def test_readable_errors():
     assert "34 seconds" in describe_error(_error(RateLimitError, "limit: 5. Please retry in 33.2s.", 429))
     assert "overloaded" in describe_error(_error(InternalServerError, "high demand", 503))
     assert "BASE_URL" in describe_error(_error(APIConnectionError, "connection refused"))
+
+
+def test_daily_quota_is_not_retried():
+    error = _error(RateLimitError, "quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier", 429)
+    assert not is_retryable(error)
+    assert "daily quota" in describe_error(error)
