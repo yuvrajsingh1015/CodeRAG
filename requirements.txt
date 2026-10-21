@@ -1,0 +1,6 @@
+faiss-cpu>=1.8
+numpy>=1.26
+openai>=1.40
+python-dotenv>=1.0
+streamlit>=1.38
+tenacity>=8.2
