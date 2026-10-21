@@ -39,7 +39,7 @@ def _embed_batch(inputs: List[str]) -> np.ndarray:
     """Call embeddings API with retry/backoff. Returns shape (n, d)."""
     client, _provider = get_ai_client()
     if client is None:
-        raise RuntimeError("AI client not initialized")
+        raise RuntimeError("No usable AI backend. Check AI_BACKEND and API_KEY in your .env.")
 
     response = client.embeddings.create(
         model=EMBEDDING_MODEL,
