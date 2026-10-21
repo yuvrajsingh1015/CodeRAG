@@ -42,6 +42,7 @@ def test_prompt_contains_cited_context(repo, embed):
     assert messages[1] == {"role": "user", "content": "hi"}
     assert "### auth/login.py:1-3" in messages[-1]["content"]
     assert "```py" in format_context(results)
+    assert "   1 | def login(user, password):" in format_context(results)
     assert messages[-1]["content"].endswith("Question: How does login work?")
 
 

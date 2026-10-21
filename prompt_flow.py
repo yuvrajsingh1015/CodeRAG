@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are a senior developer helping someone understand a codebase.
 Answer using only the code snippets provided as context.
-Cite the snippets you rely on as `path:start-end`.
+Each snippet line starts with its line number. Cite the exact lines you rely on as `path:start-end`.
+When you quote code, leave out the line numbers.
 If the context does not contain the answer, say so plainly and suggest where to look instead of guessing.
 Keep answers short and concrete, and show small code excerpts when they help."""
 
@@ -26,7 +27,10 @@ def format_context(results: List[SearchResult]) -> str:
     blocks = []
     for r in results:
         lang = r.chunk.path.rsplit(".", 1)[-1] if "." in r.chunk.path else ""
-        blocks.append(f"### {r.location}\n```{lang}\n{r.chunk.text}\n```")
+        # number every line so the model can cite exact lines, not just the chunk
+        lines = r.chunk.text.split("\n")
+        numbered = "\n".join(f"{r.chunk.start_line + i:>4} | {line}" for i, line in enumerate(lines))
+        blocks.append(f"### {r.location}\n```{lang}\n{numbered}\n```")
     return "\n\n".join(blocks)
 
 
