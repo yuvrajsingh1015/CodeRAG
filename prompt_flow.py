@@ -6,6 +6,7 @@ from typing import Dict, Iterator, List, Optional
 from coderag import config
 from coderag.ai_client import get_ai_client
 from coderag.index import CodeIndex
+from coderag.retry import api_retry, describe_error
 from coderag.search import SearchResult, search_code
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,12 @@ def build_messages(
     return messages
 
 
+# a chat should not hang for minutes, so give up sooner than indexing does
+@api_retry(attempts=3)
+def _open_stream(client, model: str, messages: List[Dict[str, str]]):
+    return client.chat.completions.create(model=model, messages=messages, stream=True, temperature=0.2)
+
+
 def stream_answer(messages: List[Dict[str, str]], model: str = config.CHAT_MODEL) -> Iterator[str]:
     """Yield the answer piece by piece as the model writes it."""
     client, _provider = get_ai_client()
@@ -50,13 +57,13 @@ def stream_answer(messages: List[Dict[str, str]], model: str = config.CHAT_MODEL
         return
 
     try:
-        stream = client.chat.completions.create(model=model, messages=messages, stream=True, temperature=0.2)
+        stream = _open_stream(client, model, messages)
         for event in stream:
             if event.choices and event.choices[0].delta.content:
                 yield event.choices[0].delta.content
     except Exception as e:
-        logger.error("Chat request failed: %s", e)
-        yield f"\n\nRequest failed: {e}"
+        logger.debug("Chat request failed: %s", e)
+        yield f"\n\nError: {describe_error(e)}"
 
 
 def ask(
